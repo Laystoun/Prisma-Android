@@ -1,0 +1,16 @@
+<resources>
+    <!-- Onboard - First activity -->
+    <string name="app_name">Prisma</string>
+    <string name="onboard_subtitle_text">Анонимный мессенджер без регистрации</string>
+    <string name="onboard_sliceOneWithoutReg_text">Без регистрации</string>
+    <string name="onboard_sliceTwoEndToEndEnc_text">Сквозное шифрование</string>
+    <string name="onboard_sliceThreeDirectConn_text">Прямые соединения</string>
+    <string name="onboard_btnText_KeyGen">Сгенерировать ключи</string>
+    <string name="onboard_subButton_text">Ключи создаются только на вашем устройстве</string>
+
+    <!--  Keygen activity  -->
+    <string name="keygen_keyCreated_text">Ключи созданы</string>
+    <string name="keygen_subtitleFingerprint_text">Это ваш уникальный отпечаток. Он однозначно определяет ваш ключ</string>
+    <string name="keygen_matrixSubText">Отпечаток ключа</string>
+    <string name="keygen_btn_text">Продолжить</string>
+</resources>

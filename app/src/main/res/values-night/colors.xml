@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#3F9AFF</color>
+    <color name="on_primary">#0A1929</color>
+    <color name="background">#101214</color>
+    <color name="surface">#1C1C1E</color>
+    <color name="background_text">#FFFFFF</color>
+    <color name="on_background">#E6E1E5</color>
+    <color name="icon_container">#0e76e1</color>
+    <color name="fingerprint_full">@color/primary</color>
+    <color name="fingerprint_soft">#593F9AFF</color>
+    <color name="fingerprint_empty">#2A313A</color>
+</resources>
