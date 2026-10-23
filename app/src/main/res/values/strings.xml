@@ -13,4 +13,9 @@
     <string name="keygen_subtitleFingerprint_text">Это ваш уникальный отпечаток. Он однозначно определяет ваш ключ</string>
     <string name="keygen_matrixSubText">Отпечаток ключа</string>
     <string name="keygen_btn_text">Продолжить</string>
+
+    <!--  Chats Activity  -->
+    <string name="chats_myQr_text">Мой QR</string>
+    <string name="chats_myKey_text">Мой ключ</string>
+    <string name="chats_newChat_text">Новый чат</string>
 </resources>

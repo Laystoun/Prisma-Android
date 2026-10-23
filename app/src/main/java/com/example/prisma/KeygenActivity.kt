@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.prisma.data.KeyManager
 import com.google.android.material.card.MaterialCardView
 import java.security.MessageDigest
 import kotlin.random.Random
@@ -27,8 +28,7 @@ class KeygenActivity : AppCompatActivity() {
         val subMatrixText = findViewById<TextView>(R.id.tv_keygen_keyText)
         val grid = findViewById<GridLayout>(R.id.grid_keygen_fingerprint)
 
-        val fakeKey = Random.nextBytes(32)
-        val hash = MessageDigest.getInstance("SHA-256").digest(fakeKey)
+        val hash = MessageDigest.getInstance("SHA-256").digest(KeyManager.getPublicKey(this))
 
         var text = ""
 
@@ -43,8 +43,6 @@ class KeygenActivity : AppCompatActivity() {
                 text += " "
             }
         }
-
-        
 
         subMatrixText.text = text
 
