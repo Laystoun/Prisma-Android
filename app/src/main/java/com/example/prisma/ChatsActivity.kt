@@ -5,6 +5,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.prisma.data.KeyManager
+import com.example.prisma.data.PrismaClient
 
 class ChatsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,5 +18,10 @@ class ChatsActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        val pubKey = KeyManager.getPublicKey(this)
+        val client = PrismaClient(this,pubKey)
+        client.start()
+
+
     }
 }

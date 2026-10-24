@@ -24,7 +24,7 @@ object KeyManager {
     const val AES_ALIAS = "prisma_warp_key"
     const val KEYS_FILENAME = "prisma_key"
 
-    val state = LazySodiumAndroid(SodiumAndroid())
+    private val state = LazySodiumAndroid(SodiumAndroid())
 
     private fun getPrefs(context: Context): SharedPreferences
     {
@@ -33,6 +33,8 @@ object KeyManager {
 
     fun hasKeys(context: Context): Boolean {
         return getPrefs(context).getString(PREF_PUBLIC, null) != null
+                && getPrefs(context).getString(PREF_PRIVATE_ENC, null) != null
+                && getPrefs(context).getString(PREF_IV, null) != null
     }
 
     fun generateAndSave(context: Context) {
@@ -94,4 +96,27 @@ object KeyManager {
         return cipher.doFinal(cipherText)
     }
 
+    fun sign(context: Context, nonce: ByteArray): ByteArray {
+        val prefs = getPrefs(context)
+        val encB64 = prefs.getString(PREF_PRIVATE_ENC, null)
+        val ivB64 = prefs.getString(PREF_IV, null)
+        if (encB64 == null || ivB64 == null) throw IllegalStateException("Ключи ещё не созданы")
+
+        val secretKey = decrypt(
+            Base64.decode(encB64, Base64.NO_WRAP),
+            Base64.decode(ivB64, Base64.NO_WRAP)
+        )
+        try {
+            return ed25519Sign(nonce, secretKey)
+        } finally {
+            secretKey.fill(0)
+        }
+    }
+
+    private fun ed25519Sign(nonce: ByteArray, secretKey: ByteArray): ByteArray {
+        val sig = ByteArray(Sign.BYTES)
+        val ok = state.cryptoSignDetached(sig, nonce, nonce.size.toLong(), secretKey)
+        if (!ok) throw IllegalStateException("Не удалось подписать")
+        return sig
+    }
 }
