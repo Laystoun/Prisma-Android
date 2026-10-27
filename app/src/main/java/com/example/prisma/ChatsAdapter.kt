@@ -12,7 +12,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ChatsAdapter : RecyclerView.Adapter<ChatsAdapter.ChatViewHolder>() {
+class ChatsAdapter(
+    private val onClick: (ChatRow) -> Unit
+) : RecyclerView.Adapter<ChatsAdapter.ChatViewHolder>() {
     private var chats: List<ChatRow> = emptyList()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
@@ -51,6 +53,10 @@ class ChatsAdapter : RecyclerView.Adapter<ChatsAdapter.ChatViewHolder>() {
             holder.time.visibility = View.VISIBLE
         } else {
             holder.time.visibility = View.GONE
+        }
+
+        holder.itemView.setOnClickListener {
+            onClick(chats[position])
         }
     }
 

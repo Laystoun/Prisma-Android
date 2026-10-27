@@ -35,4 +35,10 @@ import kotlinx.coroutines.flow.Flow
         ORDER BY lastTime DESC
     """)
     fun getChats(): Flow<List<ChatRow>>
+
+    @Query("SELECT * FROM ContactEntity WHERE id = :id")
+    suspend fun getContactById(id: Long): ContactEntity?
+
+    @Query("UPDATE MessageEntity SET isRead = 1 WHERE contactId = :contactId AND direction = 0")
+    suspend fun setMessageIsRead(contactId: Long)
 }
