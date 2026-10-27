@@ -1,8 +1,10 @@
 package com.example.prisma
 
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
 import android.widget.GridLayout
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -27,10 +29,19 @@ class KeygenActivity : AppCompatActivity() {
         }
         val subMatrixText = findViewById<TextView>(R.id.tv_keygen_keyText)
         val grid = findViewById<GridLayout>(R.id.grid_keygen_fingerprint)
+        val btnKeygenNext = findViewById<Button>(R.id.btn_keygen_next)
+
+        btnKeygenNext.setOnClickListener {
+            val chatsIntent = Intent(this, ChatsActivity::class.java)
+            startActivity(chatsIntent)
+            finish()
+        }
 
         val hash = MessageDigest.getInstance("SHA-256").digest(KeyManager.getPublicKey(this))
 
         var text = ""
+
+
 
         repeat(8) { i ->
             val b1 = hash[i * 2]
