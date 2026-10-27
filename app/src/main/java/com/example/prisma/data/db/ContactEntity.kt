@@ -51,4 +51,6 @@ abstract class PrismaDatabase : RoomDatabase() {
             return instance!!
         }
     }
+
+    abstract fun getDao(): ChatDao
 }

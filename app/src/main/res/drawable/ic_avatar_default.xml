@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- круглая подложка -->
+    <path
+        android:fillColor="#23272C"
+        android:pathData="M24,0a24,24 0 1,0 0.001,0z" />
+
+    <!-- плечи, обрезанные по кругу -->
+    <group>
+        <clip-path android:pathData="M24,0a24,24 0 1,0 0.001,0z" />
+        <path
+            android:fillColor="#6B7785"
+            android:pathData="M8,48c0,-9 7,-14 16,-14s16,5 16,14z" />
+    </group>
+
+    <!-- голова -->
+    <path
+        android:fillColor="#6B7785"
+        android:pathData="M24,12c-3.87,0 -7,3.13 -7,7s3.13,7 7,7 7,-3.13 7,-7 -3.13,-7 -7,-7z" />
+</vector>

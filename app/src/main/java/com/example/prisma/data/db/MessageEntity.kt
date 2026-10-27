@@ -27,7 +27,6 @@ serverId: Long? (message_id от сервера, у исходящих null)
         Index(value = ["serverId"], unique = true)
     ]
 )
-
 data class MessageEntity(
     @PrimaryKey (autoGenerate = true)
     val id: Long = 0,
