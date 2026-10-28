@@ -19,6 +19,7 @@ object PRISMA_CONST {
 
     /*SERVER*/
     const val SERVER_CHALLENGE = "challenge"
+    const val SERVER_OK = "ok"
 }
 
 class PrismaClient(
@@ -29,11 +30,14 @@ class PrismaClient(
     private val http = OkHttpClient()
     private var socket: WebSocket? = null
 
+    @Volatile var authorized = false
+
     fun start() {
         val request = Request.Builder().url(URL).build()
         socket = http.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 super.onOpen(webSocket, response)
+                authorized = false
                 val jsonObj = JSONObject()
                 jsonObj.put("type", PRISMA_CONST.CLIENT_HELLO)
                 jsonObj.put("pub_key", Base64.encodeToString(publicKey, Base64.NO_WRAP))
@@ -43,6 +47,7 @@ class PrismaClient(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 super.onFailure(webSocket, t, response)
+                authorized = false
                 Log.d("WS", "Ошибка соединения: ${t.message}")
             }
 
@@ -66,10 +71,25 @@ class PrismaClient(
 
                             webSocket.send(authChallenge.toString())
                         }
+
+                        PRISMA_CONST.SERVER_OK -> {
+                            authorized = true
+                        }
                     }
                 } catch (e: JSONException) {
                     Log.e("WS", "Ошибка парсинга JSON: $e")
                 }
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                super.onClosed(webSocket, code, reason)
+                authorized = false
+            }
+
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                super.onClosing(webSocket, code, reason)
+                authorized = false
+                webSocket.close(1000, null)
             }
         })
     }

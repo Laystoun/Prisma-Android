@@ -1,5 +1,6 @@
 package com.example.prisma
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
@@ -29,7 +30,12 @@ class ChatsActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        val chatsAdapter = ChatsAdapter()
+        val chatsAdapter = ChatsAdapter {chatRow ->
+            val intent = Intent(this, ChatActivity::class.java)
+            intent.putExtra("contactId", chatRow.contactId)
+            startActivity(intent)
+        }
+
         val prismaDb = PrismaDatabase.getInstance(this)
         val dao = prismaDb.getDao()
 
