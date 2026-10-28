@@ -44,7 +44,7 @@ class ChatsAdapter(
         if (chats[position].lastBody != null) {
             holder.lastMessage.text = chats[position].lastBody
         } else {
-            holder.lastMessage.text = "..."
+            holder.lastMessage.text = ""
         }
 
         val lastTime = chats[position].lastTime

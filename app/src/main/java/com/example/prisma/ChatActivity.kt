@@ -5,6 +5,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.appbar.MaterialToolbar
 
 class ChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,7 +17,11 @@ class ChatActivity : AppCompatActivity() {
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
+        val toolbar = findViewById<MaterialToolbar>(R.id.mt_chatD_toolbar)
 
+        toolbar.setNavigationOnClickListener {
+            finish()
+        }
 
     }
 }

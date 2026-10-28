@@ -49,7 +49,7 @@
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="28dp"
         app:cardElevation="0dp"
-        app:layout_constraintBottom_toTopOf="@id/btn_newChat"
+        app:layout_constraintBottom_toTopOf="@id/btn_chats_newChat"
         app:layout_constraintEnd_toStartOf="@id/gl_center"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -96,7 +96,7 @@
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="28dp"
         app:cardElevation="0dp"
-        app:layout_constraintBottom_toTopOf="@id/btn_newChat"
+        app:layout_constraintBottom_toTopOf="@id/btn_chats_newChat"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/gl_center">
 
@@ -134,7 +134,7 @@
 
     <!-- New Chat -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_newChat"
+        android:id="@+id/btn_chats_newChat"
         android:layout_width="0dp"
         android:layout_height="64dp"
         android:layout_marginStart="16dp"

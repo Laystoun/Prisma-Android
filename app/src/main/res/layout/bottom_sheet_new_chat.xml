@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/tv_sheetNewChat_ch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Выберите способ"
+        android:textSize="18sp"
+        android:layout_marginTop="12dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/md_sheetNewChat_divider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_sheetNewChat_ch"
+        app:dividerThickness="2dp"
+        app:dividerColor="@color/primary"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/md_sheetNewChat_divider">
+
+        <Button
+            android:id="@+id/btn_sheetNewChat_insertKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Вставить ключ"/>
+
+        <Button
+            android:id="@+id/btn_sheetNewChat_scanQR"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Сканировать QR"/>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

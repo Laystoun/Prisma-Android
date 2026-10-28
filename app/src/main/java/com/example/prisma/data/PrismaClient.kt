@@ -16,6 +16,7 @@ object PRISMA_CONST {
     /*CLIENT*/
     const val CLIENT_HELLO = "hello"
     const val CLIENT_AUTH = "auth"
+    const val CLIENT_SEND = "send"
 
     /*SERVER*/
     const val SERVER_CHALLENGE = "challenge"
@@ -92,5 +93,18 @@ class PrismaClient(
                 webSocket.close(1000, null)
             }
         })
+    }
+
+    fun send(receiverKey: String, text: String): Boolean {
+        if (!authorized) return false
+
+        val blob = Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+
+        val json = JSONObject()
+        json.put("type", PRISMA_CONST.CLIENT_SEND)
+        json.put("to", receiverKey)
+        json.put("blob", blob)
+
+        return socket?.send(json.toString()) ?: false
     }
 }
