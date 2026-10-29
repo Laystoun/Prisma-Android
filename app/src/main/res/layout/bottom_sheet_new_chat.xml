@@ -28,6 +28,7 @@
         app:dividerColor="@color/primary"/>
 
     <LinearLayout
+        android:id="@+id/ll_sheetNewChat_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp"
@@ -41,14 +42,29 @@
             android:id="@+id/btn_sheetNewChat_insertKey"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_button_base"
             android:text="Вставить ключ"/>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="8dp"/>
 
         <Button
             android:id="@+id/btn_sheetNewChat_scanQR"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_button_base"
             android:text="Сканировать QR"/>
 
     </LinearLayout>
+
+    <Space
+        android:id="@+id/space_sheetNewChat_bottomSpace"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ll_sheetNewChat_container"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

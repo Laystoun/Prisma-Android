@@ -33,6 +33,7 @@ class KeygenActivity : AppCompatActivity() {
 
         btnKeygenNext.setOnClickListener {
             val chatsIntent = Intent(this, ChatsActivity::class.java)
+            (application as PrismaApp).initClient()
             startActivity(chatsIntent)
             finish()
         }

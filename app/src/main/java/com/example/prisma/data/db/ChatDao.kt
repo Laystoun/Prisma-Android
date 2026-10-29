@@ -41,4 +41,10 @@ import kotlinx.coroutines.flow.Flow
 
     @Query("UPDATE MessageEntity SET isRead = 1 WHERE contactId = :contactId AND direction = 0")
     suspend fun setMessageIsRead(contactId: Long)
+
+    @Query("UPDATE MessageEntity SET status = :status WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: Int)
+
+    @Query("UPDATE ContactEntity SET name = :newName WHERE id = :contactId")
+    suspend fun updateNameToContact(contactId: Long, newName: String)
 }

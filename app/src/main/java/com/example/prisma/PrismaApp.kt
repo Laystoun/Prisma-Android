@@ -10,13 +10,18 @@ class PrismaApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        if (KeyManager.hasKeys(this)) {
+        initClient()
+    }
+
+    fun initClient() {
+        if (!::client.isInitialized && KeyManager.hasKeys(this)) {
             val pubKey = KeyManager.getPublicKey(this)
             client = PrismaClient(
                 this,
                 pubKey
             )
             client.start()
+
         }
     }
 }

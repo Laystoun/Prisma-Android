@@ -3,12 +3,24 @@ package com.example.prisma.data
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.example.prisma.data.db.ContactEntity
+import com.example.prisma.data.db.MessageDirection
+import com.example.prisma.data.db.MessageEntity
+import com.example.prisma.data.db.MessageStatus
+import com.example.prisma.data.db.PrismaDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okio.ByteString
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -17,28 +29,43 @@ object PRISMA_CONST {
     const val CLIENT_HELLO = "hello"
     const val CLIENT_AUTH = "auth"
     const val CLIENT_SEND = "send"
+    const val CLIENT_ACK = "ack"
 
     /*SERVER*/
     const val SERVER_CHALLENGE = "challenge"
     const val SERVER_OK = "ok"
+    const val SERVER_DELIVER = "deliver"
 }
 
 class PrismaClient(
     private val context: Context,
     private val publicKey: ByteArray
 ) {
-    private val URL = "wss://tel-c3e.plurio.biz/ws"
+    private val URL = "wss://prisma.plurio.biz/ws"
     private val http = OkHttpClient()
     private var socket: WebSocket? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val dao by lazy { PrismaDatabase.getInstance(context).getDao() }
+    private val conn = MutableStateFlow(false)
+    val connected = conn.asStateFlow()
 
+    val reconnecting = AtomicBoolean(false)
+    val retryDelay: Long = 1000
+
+    @Volatile private var attempts = 0
     @Volatile var authorized = false
+    @Volatile private var generation = 0
 
     fun start() {
         val request = Request.Builder().url(URL).build()
+        val gen = ++generation
+        socket?.cancel()
         socket = http.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 super.onOpen(webSocket, response)
+                conn.value = false
                 authorized = false
+
                 val jsonObj = JSONObject()
                 jsonObj.put("type", PRISMA_CONST.CLIENT_HELLO)
                 jsonObj.put("pub_key", Base64.encodeToString(publicKey, Base64.NO_WRAP))
@@ -47,8 +74,11 @@ class PrismaClient(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (gen != generation) { return }
                 super.onFailure(webSocket, t, response)
                 authorized = false
+                conn.value = false
+                scheduleReconnect()
                 Log.d("WS", "Ошибка соединения: ${t.message}")
             }
 
@@ -75,21 +105,36 @@ class PrismaClient(
 
                         PRISMA_CONST.SERVER_OK -> {
                             authorized = true
+                            conn.value = true
+                            attempts = 0
+                        }
+
+                        PRISMA_CONST.SERVER_DELIVER -> {
+                            val messageId = jsonObj.getLong("message_id")
+                            val from = jsonObj.getString("from")
+                            val blob = jsonObj.getString("blob")
+                            scope.launch { handleDeliver(webSocket, messageId, from, blob) }
                         }
                     }
-                } catch (e: JSONException) {
+                } catch (e: Exception) {
                     Log.e("WS", "Ошибка парсинга JSON: $e")
                 }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                if (gen != generation) { return }
                 super.onClosed(webSocket, code, reason)
                 authorized = false
+                conn.value = false
+
+                scheduleReconnect()
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (gen != generation) { return }
                 super.onClosing(webSocket, code, reason)
                 authorized = false
+                conn.value = false
                 webSocket.close(1000, null)
             }
         })
@@ -106,5 +151,58 @@ class PrismaClient(
         json.put("blob", blob)
 
         return socket?.send(json.toString()) ?: false
+    }
+
+    private suspend fun handleDeliver(
+        webSocket: WebSocket,
+        messageId: Long,
+        from: String,
+        blob: String
+    ) {
+        try {
+            val body = String(Base64.decode(blob, Base64.NO_WRAP), Charsets.UTF_8)
+
+            var contact = dao.getContactByKey(from)
+            if (contact == null) {
+                dao.insertContact(
+                    ContactEntity(pubKey = from, name = null, created = System.currentTimeMillis())
+                )
+                contact = dao.getContactByKey(from)
+            }
+            if (contact == null) return
+
+            dao.insertMessage(
+                MessageEntity(
+                    contactId = contact.id,
+                    direction = MessageDirection.IN,
+                    body = body,
+                    createdAt = System.currentTimeMillis(),
+                    status = MessageStatus.SENT,
+                    isRead = false,
+                    serverId = messageId
+                )
+            )
+
+            val ack = JSONObject()
+            ack.put("type", PRISMA_CONST.CLIENT_ACK)
+            ack.put("message_id", messageId)
+            webSocket.send(ack.toString())
+        } catch (e: Exception) {
+            Log.e("WS", "Ошибка обработки deliver: $e")
+        }
+    }
+
+    fun scheduleReconnect() {
+        if (!reconnecting.compareAndSet(false, true)) return
+
+        val delayMs = if (attempts < 5) 1000L
+                      else minOf(1000L + (attempts - 4) * 500L, 15000L)
+        attempts++
+
+        scope.launch {
+            delay(delayMs)
+            reconnecting.set(false)
+            start()
+        }
     }
 }

@@ -58,6 +58,11 @@ class ChatsAdapter(
         holder.itemView.setOnClickListener {
             onClick(chats[position])
         }
+
+        holder.itemView.setOnLongClickListener {
+            true
+            // Тут писать реализацию удаления контакта
+        }
     }
 
     override fun getItemCount(): Int {

@@ -145,6 +145,7 @@
         android:textColor="@color/on_primary"
         android:textSize="18sp"
         android:textStyle="bold"
+        android:background="@drawable/bg_button_base"
         app:cornerRadius="32dp"
         app:icon="@drawable/ic_add"
         app:iconGravity="textStart"

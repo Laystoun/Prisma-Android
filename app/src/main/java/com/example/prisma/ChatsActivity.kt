@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -18,15 +17,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.example.prisma.data.KeyManager
-import com.example.prisma.data.PrismaClient
-import com.example.prisma.data.db.ContactEntity
-import com.example.prisma.data.db.MessageEntity
-import com.example.prisma.data.db.MessageStatus
-import com.example.prisma.data.db.PrismaDatabase
-import kotlinx.coroutines.flow.first
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
+import com.example.prisma.data.KeyManager
+import com.example.prisma.data.db.ContactEntity
+import com.example.prisma.data.db.PrismaDatabase
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.card.MaterialCardView
@@ -46,6 +42,9 @@ class ChatsActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        val client = (application as PrismaApp).client
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
         val myKeyBtn = findViewById<MaterialCardView>(R.id.cv_myKey)
         val newChatBtn = findViewById<Button>(R.id.btn_chats_newChat)
         newChatBtn.setOnClickListener {
@@ -69,6 +68,17 @@ class ChatsActivity : AppCompatActivity() {
         rv_chats.adapter=chatsAdapter
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
+                client.connected.collect {isConnected ->
+                    when (isConnected) {
+                        false -> toolbar.title = "Подключение..."
+                        true -> toolbar.title  = "Prisma"
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
                 dao.getChats().collect { list ->
                     chatsAdapter.submit(list)
                 }
@@ -88,7 +98,6 @@ class ChatsActivity : AppCompatActivity() {
         sheet.show()
         sheet.setupHalfScreen()
     }
-
     private fun showPasteKeySheet(parent: BottomSheetDialog) {
         val sheet = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_insert_key, null)
@@ -123,21 +132,20 @@ class ChatsActivity : AppCompatActivity() {
             }
         }
         sheet.show()
-        sheet.setupHalfScreen()
     }
+}
 
-    private fun BottomSheetDialog.setupHalfScreen() {
-        val bottomSheet = findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-        bottomSheet?.let { sheetView ->
-            val behavior = BottomSheetBehavior.from(sheetView)
-            val screenHeight = context.resources.displayMetrics.heightPixels
-            val halfHeight = screenHeight / 2
+fun BottomSheetDialog.setupHalfScreen() {
+    val bottomSheet = findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+    bottomSheet?.let { sheetView ->
+        val behavior = BottomSheetBehavior.from(sheetView)
+        val screenHeight = context.resources.displayMetrics.heightPixels
+        val halfHeight = screenHeight / 2
 
-            sheetView.layoutParams.height = halfHeight
+        sheetView.layoutParams.height = halfHeight
 
-            behavior.skipCollapsed = true
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            behavior.peekHeight = halfHeight
-        }
+        behavior.skipCollapsed = true
+        behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        behavior.peekHeight = halfHeight
     }
 }
