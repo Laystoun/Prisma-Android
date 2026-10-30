@@ -47,4 +47,7 @@ import kotlinx.coroutines.flow.Flow
 
     @Query("UPDATE ContactEntity SET name = :newName WHERE id = :contactId")
     suspend fun updateNameToContact(contactId: Long, newName: String)
+
+    @Query("DELETE FROM ContactEntity WHERE id = :id")
+    suspend fun deleteContact(id: Long)
 }

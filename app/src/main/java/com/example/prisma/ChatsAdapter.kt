@@ -8,20 +8,44 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.prisma.data.db.ChatRow
+import com.google.android.material.card.MaterialCardView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ChatsAdapter(
-    private val onClick: (ChatRow) -> Unit
+    private val onClick: (ChatRow) -> Unit,
+    private val onSelectionChanged: (Int) -> Unit
 ) : RecyclerView.Adapter<ChatsAdapter.ChatViewHolder>() {
-    private var chats: List<ChatRow> = emptyList()
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
+    private var chats: List<ChatRow> = emptyList()
+    private val selected = mutableSetOf<Long>()
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val isSelected: Boolean get() = selected.isNotEmpty()
     fun submit(newList: List<ChatRow>) {
         chats = newList
+        selected.retainAll ( newList.map { it.contactId }.toSet() )
         notifyDataSetChanged()
+        onSelectionChanged(selected.size)
     }
+
+    fun toggle(contactId: Long) {
+        if (selected.contains(contactId)) {
+            selected.remove(contactId)
+        } else {
+            selected.add(contactId)
+        }
+        notifyDataSetChanged()
+        onSelectionChanged(selected.size)
+    }
+
+    fun clearSelection() {
+        selected.clear()
+        notifyDataSetChanged()
+        onSelectionChanged(0)
+    }
+
+    fun getSelectedIds(): List<Long> = selected.toList()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -55,13 +79,18 @@ class ChatsAdapter(
             holder.time.visibility = View.GONE
         }
 
+        (holder.itemView as MaterialCardView).isChecked = chats[position].contactId in selected
+
         holder.itemView.setOnClickListener {
-            onClick(chats[position])
+            val pos = holder.bindingAdapterPosition
+            if (pos == RecyclerView.NO_POSITION) { return@setOnClickListener }
+            if (isSelected) toggle(chats[position].contactId) else onClick(chats[position])
         }
 
         holder.itemView.setOnLongClickListener {
+            val pos = holder.bindingAdapterPosition
+            if (pos != RecyclerView.NO_POSITION) { toggle(chats[position].contactId) }
             true
-            // Тут писать реализацию удаления контакта
         }
     }
 

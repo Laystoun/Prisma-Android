@@ -6,12 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -26,12 +29,17 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ChatsActivity : AppCompatActivity() {
     private val dao by lazy {
         PrismaDatabase.getInstance(this).getDao()
     }
+    private var selectedCount = 0
+    private var isConnected = false
+    lateinit var chatsAdapter: ChatsAdapter
+    lateinit var toolbar: MaterialToolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +52,7 @@ class ChatsActivity : AppCompatActivity() {
         }
         val client = (application as PrismaApp).client
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
+        toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
         val myKeyBtn = findViewById<MaterialCardView>(R.id.cv_myKey)
         val newChatBtn = findViewById<Button>(R.id.btn_chats_newChat)
         newChatBtn.setOnClickListener {
@@ -58,21 +66,44 @@ class ChatsActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(clip)
         }
 
-        val chatsAdapter = ChatsAdapter {chatRow ->
-            val intent = Intent(this, ChatActivity::class.java)
-            intent.putExtra("contactId", chatRow.contactId)
-            startActivity(intent)
+        fun updateTitle() {
+            toolbar.title = when {
+                selectedCount > 0 -> "Выбрано: $selectedCount"
+                isConnected -> "Prisma"
+                else -> "Подключение..."
+            }
+        }
+
+        chatsAdapter = ChatsAdapter(
+            onClick = { chatRow ->
+                val intent = Intent(this, ChatActivity::class.java)
+                intent.putExtra("contactId", chatRow.contactId)
+                startActivity(intent)
+            },
+            onSelectionChanged = { count ->
+                selectedCount = count
+                updateTitle()
+                updateMenu()
+            }
+        )
+
+        toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_delete -> {
+                    confirmDelete()
+                    true
+                }
+                else -> false
+            }
         }
 
         val rv_chats = findViewById<RecyclerView>(R.id.rv_chats)
         rv_chats.adapter=chatsAdapter
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                client.connected.collect {isConnected ->
-                    when (isConnected) {
-                        false -> toolbar.title = "Подключение..."
-                        true -> toolbar.title  = "Prisma"
-                    }
+                client.connected.collect {isConn ->
+                    isConnected = isConn
+                    updateTitle()
                 }
             }
         }
@@ -84,7 +115,31 @@ class ChatsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
+    private fun updateMenu() {
+        val selecting = selectedCount > 0
+        toolbar.menu.findItem(R.id.action_search)?.isVisible = !selecting
+        toolbar.menu.findItem(R.id.action_delete)?.isVisible = selecting
+    }
+
+    private fun confirmDelete() {
+        val toDelete = chatsAdapter.getSelectedIds()
+        if (toDelete.isEmpty()) return
+
+        val btmSheet = BottomSheetDialog(this)
+        val sheetInflate = layoutInflater.inflate(R.layout.bottom_sheet_delete_contacts, null)
+        btmSheet.setContentView(sheetInflate)
+
+        sheetInflate.findViewById<Button>(R.id.btn_sheetDeleteChats).setOnClickListener {
+            lifecycleScope.launch {
+                toDelete.map { id -> dao.deleteContact(id) }
+                chatsAdapter.clearSelection()
+                btmSheet.dismiss()
+            }
+        }
+
+        btmSheet.show()
     }
 
     private fun showNewChatsDialog() {

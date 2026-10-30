@@ -7,12 +7,13 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
+    android:checkable="true"
+    app:cardBackgroundColor="@color/card_bg"
+    app:strokeColor="@color/card_stroke"
     android:orientation="vertical"
     android:layout_marginBottom="6dp"
-    app:cardBackgroundColor="@color/surface"
     app:cardCornerRadius="20dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/fingerprint_empty"
     app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout

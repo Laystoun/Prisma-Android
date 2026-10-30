@@ -9,4 +9,12 @@
         app:iconTint="@color/background_text"
         app:showAsAction="always" />
 
+    <item
+        android:id="@+id/action_delete"
+        android:icon="@drawable/ic_delete"
+        android:title="Удалить"
+        android:visible="false"
+        app:iconTint="#FF3B30"
+        app:showAsAction="always" />
+
 </menu>
