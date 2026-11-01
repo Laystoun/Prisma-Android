@@ -4,7 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Base64
 import android.view.Menu
 import android.view.MenuItem
@@ -14,8 +17,10 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -31,6 +36,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.jar.Manifest
 
 class ChatsActivity : AppCompatActivity() {
     private val dao by lazy {
@@ -40,6 +46,17 @@ class ChatsActivity : AppCompatActivity() {
     private var isConnected = false
     lateinit var chatsAdapter: ChatsAdapter
     lateinit var toolbar: MaterialToolbar
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+
+            if (!isGranted)
+            {
+                showWindowAccessNotify()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +68,8 @@ class ChatsActivity : AppCompatActivity() {
             insets
         }
         val client = (application as PrismaApp).client
+
+        getPermissionOnNotify()
 
         toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
         val myKeyBtn = findViewById<MaterialCardView>(R.id.cv_myKey)
@@ -187,6 +206,47 @@ class ChatsActivity : AppCompatActivity() {
             }
         }
         sheet.show()
+    }
+
+    private fun getPermissionOnNotify() {
+        /*on Android 12 and below there is no separate permission*/
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return
+        }
+
+        val permission = android.Manifest.permission.POST_NOTIFICATIONS
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED)
+        {
+            return
+        }
+
+        notificationPermissionLauncher.launch(permission)
+    }
+
+    private fun showWindowAccessNotify() {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(
+            R.layout.bottom_sheet_denied_notif_perm,null
+        )
+
+        bottomSheet.setContentView(view)
+
+        view.findViewById<Button>(R.id.btn_sheetDeniedNotifPerm_getPerm).setOnClickListener {
+            bottomSheet.dismiss()
+            if (shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+                getPermissionOnNotify()
+            } else {
+                openNotificationSettings()
+            }
+        }
+
+        bottomSheet.show()
+    }
+
+    private fun openNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        startActivity(intent)
     }
 }
 

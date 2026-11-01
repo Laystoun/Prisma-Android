@@ -10,4 +10,5 @@
     <color name="fingerprint_full">@color/primary</color>
     <color name="fingerprint_soft">#591A73D9</color>
     <color name="fingerprint_empty">#E6E8EC</color>
+    <color name="btn_text_color">@color/white</color>
 </resources>

@@ -90,13 +90,68 @@ object KeyManager {
         return Pair(encrypted, cipher.iv)
     }
 
-    private fun decrypt(cipherText: ByteArray, iv: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeyAes(), GCMParameterSpec(128, iv))
-        return cipher.doFinal(cipherText)
+    fun encryptFor(context: Context, contactPub: ByteArray, text: String): ByteArray {
+        val ed25519PrivateKey = getPrivateKeyEd25519(context)
+        val curve25519Private = ByteArray(32)
+        val textBytes = text.toByteArray(Charsets.UTF_8)
+
+        try {
+            val success = state.convertSecretKeyEd25519ToCurve25519(curve25519Private, ed25519PrivateKey)
+            if (!success) { throw IllegalStateException("Ошибка создания ключа curve25519") }
+
+            val curve25519PublicKey = ByteArray(32)
+            val pubSuccess = state.convertPublicKeyEd25519ToCurve25519(curve25519PublicKey, contactPub)
+            if (!pubSuccess) { throw IllegalStateException("Ошибка создания ключа curve25519") }
+
+            val nonce = state.nonce(24)
+            val result = ByteArray(textBytes.size + 16)
+            val encrypt = state.cryptoBoxEasy(result, textBytes,
+                textBytes.size.toLong(), nonce, curve25519PublicKey, curve25519Private)
+
+            if (!encrypt) { throw IllegalStateException("Не удалось зашифровать сообщение") }
+
+            return byteArrayOf(1) + nonce + result
+        }
+        finally {
+            ed25519PrivateKey.fill(0)
+            curve25519Private.fill(0)
+            textBytes.fill(0)
+        }
     }
 
-    fun sign(context: Context, nonce: ByteArray): ByteArray {
+    fun decryptFor(context: Context, senderPub: ByteArray, blob: ByteArray): String? {
+        if (blob.size < 41) { return null }
+
+        val ed25519PrivateKey = getPrivateKeyEd25519(context)
+        val curve25519Private = ByteArray(32)
+
+        try {
+            val success = state.convertSecretKeyEd25519ToCurve25519(curve25519Private, ed25519PrivateKey)
+            if (!success) { throw IllegalStateException("Ошибка создания ключа curve25519") }
+
+            val curve25519PublicKey = ByteArray(32)
+            val pubSuccess = state.convertPublicKeyEd25519ToCurve25519(curve25519PublicKey, senderPub)
+            if (!pubSuccess) { throw IllegalStateException("Ошибка создания ключа curve25519") }
+
+            val nonce = blob.copyOfRange(1, 25)
+            val cipher = blob.copyOfRange(25, blob.size)
+
+            val msg = ByteArray(cipher.size - 16)
+            val decrypt = state.cryptoBoxOpenEasy(msg, cipher, cipher.size.toLong(), nonce, curve25519PublicKey, curve25519Private)
+
+            if (!decrypt) {
+                Log.w("WS", "[KeyManager.kt] state.cryptoBoxOpenEasy вернула false")
+                return null
+            }
+
+            return String(msg, Charsets.UTF_8)
+        } finally {
+            ed25519PrivateKey.fill(0)
+            curve25519Private.fill(0)
+        }
+    }
+
+    private fun getPrivateKeyEd25519(context: Context): ByteArray {
         val prefs = getPrefs(context)
         val encB64 = prefs.getString(PREF_PRIVATE_ENC, null)
         val ivB64 = prefs.getString(PREF_IV, null)
@@ -106,6 +161,18 @@ object KeyManager {
             Base64.decode(encB64, Base64.NO_WRAP),
             Base64.decode(ivB64, Base64.NO_WRAP)
         )
+
+        return secretKey
+    }
+
+    private fun decrypt(cipherText: ByteArray, iv: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeyAes(), GCMParameterSpec(128, iv))
+        return cipher.doFinal(cipherText)
+    }
+
+    fun sign(context: Context, nonce: ByteArray): ByteArray {
+        val secretKey = getPrivateKeyEd25519(context)
         try {
             return ed25519Sign(nonce, secretKey)
         } finally {

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Space
+        android:id="@+id/space_sheetDeniedNotifPerm"
+        android:layout_width="match_parent"
+        android:layout_height="12dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btn_sheetDeniedNotifPerm_getPerm"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/bg_button_base"
+        android:layout_marginHorizontal="20dp"
+        android:text="Разрешить уведомления"
+        android:textColor="@color/btn_text_color"
+        android:textSize="16.5sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/space_sheetDeniedNotifPerm" />
+
+    <Space
+        android:id="@+id/space2_sheetDeniedNotifPerm"
+        android:layout_width="match_parent"
+        android:layout_height="12dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_sheetDeniedNotifPerm_getPerm"
+        app:layout_constraintBottom_toTopOf="@id/tv_sheetDeniedNotifPerm_warning" />
+
+    <TextView
+        android:id="@+id/tv_sheetDeniedNotifPerm_warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Мы не сможем уведомить вас\nКогда вам кто-то напишет."
+        android:textSize="18sp"
+        android:textAlignment="center"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/space2_sheetDeniedNotifPerm" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_sheetDeniedNotifPerm_warning" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
