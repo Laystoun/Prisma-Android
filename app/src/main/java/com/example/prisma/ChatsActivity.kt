@@ -5,8 +5,8 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -44,9 +44,8 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import kotlinx.coroutines.launch
-import androidx.core.graphics.drawable.toDrawable
 
 class ChatsActivity : AppCompatActivity() {
     private val dao by lazy {
@@ -68,6 +67,17 @@ class ChatsActivity : AppCompatActivity() {
             }
         }
 
+    private val cameraPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                openQrScanner()
+            } else {
+                showCameraDeniedSheet()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -81,15 +91,19 @@ class ChatsActivity : AppCompatActivity() {
 
         getPermissionOnNotify()
 
-        toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
-        val myKeyBtn = findViewById<MaterialCardView>(R.id.cv_myKey)
-        val newChatBtn = findViewById<Button>(R.id.btn_chats_newChat)
-        newChatBtn.setOnClickListener {
-            showNewChatsDialog()
+        supportFragmentManager.setFragmentResultListener(
+            QrScannerSheet.REQUEST_KEY,
+            this
+        ) { _, bundle ->
+            bundle.getString(QrScannerSheet.RESULT_KEY)?.let { key ->
+                lifecycleScope.launch { addContactIfNew(key) }
+            }
         }
 
-        myKeyBtn.setOnClickListener {
-            openCopyKeySheet()
+        toolbar = findViewById<MaterialToolbar>(R.id.mt_chat_toolbar)
+        val fabNewChat = findViewById<ExtendedFloatingActionButton>(R.id.fab_chats_newChat)
+        fabNewChat.setOnClickListener {
+            showChatsFabSheet()
         }
 
         fun updateTitle() {
@@ -159,7 +173,7 @@ class ChatsActivity : AppCompatActivity() {
 
         sheetInflate.findViewById<Button>(R.id.btn_sheetDeleteChats).setOnClickListener {
             lifecycleScope.launch {
-                toDelete.map { id -> dao.deleteContact(id) }
+                toDelete.forEach { id -> dao.deleteContact(id) }
                 chatsAdapter.clearSelection()
                 btmSheet.dismiss()
             }
@@ -168,17 +182,73 @@ class ChatsActivity : AppCompatActivity() {
         btmSheet.show()
     }
 
-    private fun showNewChatsDialog() {
+    private fun showChatsFabSheet() {
         val sheet = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_new_chat, null)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_chats_fab, null)
         sheet.setContentView(view)
 
-        view.findViewById<View>(R.id.btn_sheetNewChat_insertKey).setOnClickListener {
+        view.findViewById<View>(R.id.cv_fab_scanQr).setOnClickListener {
+            sheet.dismiss()
+            onScanQrClicked()
+        }
+
+        view.findViewById<View>(R.id.cv_fab_importKey).setOnClickListener {
             showPasteKeySheet(sheet)
         }
+
+        view.findViewById<View>(R.id.cv_fab_myKey).setOnClickListener {
+            sheet.dismiss()
+            openCopyKeySheet()
+        }
+
         sheet.show()
-        sheet.setupHalfScreen()
     }
+
+    private fun onScanQrClicked() {
+        val permission = android.Manifest.permission.CAMERA
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            openQrScanner()
+        } else {
+            cameraPermissionLauncher.launch(permission)
+        }
+    }
+
+    private fun openQrScanner() {
+        if (supportFragmentManager.findFragmentByTag(QrScannerSheet.TAG) != null) return
+        QrScannerSheet().show(supportFragmentManager, QrScannerSheet.TAG)
+    }
+
+    private fun showCameraDeniedSheet() {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_denied_camera_perm, null)
+        bottomSheet.setContentView(view)
+
+        view.findViewById<Button>(R.id.btn_sheetDeniedCameraPerm_getPerm).setOnClickListener {
+            bottomSheet.dismiss()
+            if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
+                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+            } else {
+                openAppSettings()
+            }
+        }
+
+        bottomSheet.show()
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", packageName, null)
+        )
+        startActivity(intent)
+    }
+
+    private suspend fun addContactIfNew(key: String) {
+        if (dao.getContactByKey(key) == null) {
+            dao.insertContact(ContactEntity(pubKey = key, name = null, created = System.currentTimeMillis()))
+        }
+    }
+
     private fun showPasteKeySheet(parent: BottomSheetDialog) {
         val sheet = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_insert_key, null)
@@ -190,24 +260,16 @@ class ChatsActivity : AppCompatActivity() {
         val btnContinue = view.findViewById<View>(R.id.btn_sheetInsertKey_pasteKeyContinue)
 
         btnContinue.setOnClickListener {
-            val raw = etKey.text.toString().trim()
-            val bytes = try {
-                Base64.decode(raw, Base64.NO_WRAP)
-            } catch (e: IllegalArgumentException) {
-                null
-            }
+            val key = parsePublicKey(etKey.text.toString())
 
-            if (bytes == null || bytes.size != 32) {
+            if (key == null) {
                 tvError.text = "Ключ должен быть в base64 и ровно 32 байта"
                 tvError.visibility = View.VISIBLE
                 return@setOnClickListener
             }
 
-            val key = Base64.encodeToString(bytes, Base64.NO_WRAP)
             lifecycleScope.launch {
-                if (dao.getContactByKey(key) == null) {
-                    dao.insertContact(ContactEntity(pubKey = key, name = null, created = System.currentTimeMillis()))
-                }
+                addContactIfNew(key)
                 sheet.dismiss()
                 parent.dismiss()
             }

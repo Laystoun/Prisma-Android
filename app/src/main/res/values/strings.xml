@@ -15,7 +15,18 @@
     <string name="keygen_btn_text">Продолжить</string>
 
     <!--  Chats Activity  -->
-    <string name="chats_myQr_text">Мой QR</string>
     <string name="chats_myKey_text">Мой ключ</string>
+    <string name="chats_fab_sheet_title">Новый чат</string>
+    <string name="chats_fab_scanQr_text">Сканировать QR-код</string>
+    <string name="chats_fab_importKey_text">Импортировать ключ</string>
     <string name="chats_newChat_text">Новый чат</string>
+
+    <!--  Other  -->
+    <string name="qr_scanner_title">Отсканируйте QR-код</string>
+    <string name="qr_scanner_close">Закрыть</string>
+    <string name="qr_scanner_torch">Фонарик</string>
+    <string name="qr_scanner_gallery">Выбрать из галереи</string>
+    <string name="denied_camera_title">Нужен доступ к камере</string>
+    <string name="denied_camera_text">Чтобы сканировать QR-коды, разрешите приложению использовать камеру.</string>
+    <string name="denied_camera_button">Разрешить камеру</string>
 </resources>
