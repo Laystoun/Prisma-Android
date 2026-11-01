@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#3F9AFF</color>
-    <color name="on_primary">#0A1929</color>
+    <!-- Old primary color: 1A73D9  -->
+    <color name="primary">#1F6FEB</color>
+    <color name="on_primary">#FFFFFF</color>
     <color name="background">#101214</color>
     <color name="surface">#1C1C1E</color>
     <color name="background_text">#FFFFFF</color>
