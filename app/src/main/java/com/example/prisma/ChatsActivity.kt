@@ -2,25 +2,26 @@ package com.example.prisma
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Base64
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -30,13 +31,22 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.prisma.data.KeyManager
 import com.example.prisma.data.db.ContactEntity
 import com.example.prisma.data.db.PrismaDatabase
+import com.github.alexzhirkevich.customqrgenerator.QrData
+import com.github.alexzhirkevich.customqrgenerator.vector.QrCodeDrawable
+import com.github.alexzhirkevich.customqrgenerator.vector.createQrVectorOptions
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorBallShape
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorColor
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorFrameShape
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorLogoPadding
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorLogoShape
+import com.github.alexzhirkevich.customqrgenerator.vector.style.QrVectorPixelShape
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.jar.Manifest
+import androidx.core.graphics.drawable.toDrawable
 
 class ChatsActivity : AppCompatActivity() {
     private val dao by lazy {
@@ -79,10 +89,7 @@ class ChatsActivity : AppCompatActivity() {
         }
 
         myKeyBtn.setOnClickListener {
-            val clipboard = this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val pubKeyBase64 = Base64.encodeToString(KeyManager.getPublicKey(this), Base64.NO_WRAP)
-            val clip = ClipData.newPlainText("Мой ключ", pubKeyBase64)
-            clipboard.setPrimaryClip(clip)
+            openCopyKeySheet()
         }
 
         fun updateTitle() {
@@ -248,6 +255,97 @@ class ChatsActivity : AppCompatActivity() {
         intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         startActivity(intent)
     }
+
+
+    private fun openCopyKeySheet() {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(
+            R.layout.bottom_sheet_copy_key,
+            null
+        )
+        bottomSheet.setContentView(view)
+
+        val qrImage = view.findViewById<ImageView>(R.id.iv_sheetCopyKey)
+        val subMatrixText = view.findViewById<TextView>(R.id.tv_sheetCopyKey)
+
+        val publicKey = KeyManager.getPublicKey(this)
+        val publicKeyBase64 = Base64.encodeToString(
+            publicKey,
+            Base64.NO_WRAP
+        )
+
+        subMatrixText.text = "QR-код публичного ключа"
+
+        val data = QrData.Text(publicKeyBase64)
+
+        val primaryColor = ContextCompat.getColor(this, R.color.primary)
+        val darkerColor = ColorUtils.blendARGB(
+            primaryColor,
+            Color.BLACK,
+            0.18f
+        )
+
+        val options = createQrVectorOptions {
+            padding = 0.15f
+
+            background {
+                drawable = GradientDrawable().apply {
+                    setColor(Color.WHITE)
+                    cornerRadius = 42.toFloat()
+                }
+            }
+
+            logo {
+                drawable = ContextCompat.getDrawable(
+                    this@ChatsActivity,
+                    R.drawable.prisma_logo
+                )
+
+                size = 0.20f
+                padding = QrVectorLogoPadding.Natural(0.2f)
+                shape = QrVectorLogoShape.Circle
+            }
+
+            colors {
+                dark = QrVectorColor.LinearGradient(
+                    colors = listOf(
+                        0f to darkerColor,
+                        1f to primaryColor
+                    ),
+                    orientation = QrVectorColor.LinearGradient.Orientation.LeftDiagonal
+                )
+
+                ball = QrVectorColor.Solid(primaryColor)
+                frame = QrVectorColor.Solid(primaryColor)
+            }
+
+            shapes {
+                darkPixel = QrVectorPixelShape.RoundCorners(0.20f)
+                ball = QrVectorBallShape.RoundCorners(0.25f)
+                frame = QrVectorFrameShape.RoundCorners(0.20f)
+            }
+        }
+
+        val qrDrawable = QrCodeDrawable(data, options)
+        qrImage.setImageDrawable(qrDrawable)
+
+        view.findViewById<MaterialButton>(R.id.btn_sheetCopyKey)
+            .setOnClickListener {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE)
+                        as ClipboardManager
+
+                val clip = ClipData.newPlainText(
+                    "Мой публичный ключ",
+                    publicKeyBase64
+                )
+
+                clipboard.setPrimaryClip(clip)
+                bottomSheet.dismiss()
+            }
+
+        bottomSheet.show()
+    }
+
 }
 
 fun BottomSheetDialog.setupHalfScreen() {
