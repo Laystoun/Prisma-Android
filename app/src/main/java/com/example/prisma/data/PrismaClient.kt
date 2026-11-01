@@ -8,6 +8,7 @@ import com.example.prisma.data.db.MessageDirection
 import com.example.prisma.data.db.MessageEntity
 import com.example.prisma.data.db.MessageStatus
 import com.example.prisma.data.db.PrismaDatabase
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,6 +31,7 @@ object PRISMA_CONST {
     const val CLIENT_AUTH = "auth"
     const val CLIENT_SEND = "send"
     const val CLIENT_ACK = "ack"
+    const val CLIENT_PUSH_TOKEN = "push_token"
 
     /*SERVER*/
     const val SERVER_CHALLENGE = "challenge"
@@ -107,6 +109,8 @@ class PrismaClient(
                             authorized = true
                             conn.value = true
                             attempts = 0
+
+                            pushToken(webSocket)
                         }
 
                         PRISMA_CONST.SERVER_DELIVER -> {
@@ -143,7 +147,15 @@ class PrismaClient(
     fun send(receiverKey: String, text: String): Boolean {
         if (!authorized) return false
 
-        val blob = Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+        val blob: String
+
+        try {
+            val decodePubKey = Base64.decode(receiverKey, Base64.NO_WRAP)
+            val encrypt = KeyManager.encryptFor(context, decodePubKey, text)
+            blob = Base64.encodeToString(encrypt, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            return false
+        }
 
         val json = JSONObject()
         json.put("type", PRISMA_CONST.CLIENT_SEND)
@@ -160,7 +172,20 @@ class PrismaClient(
         blob: String
     ) {
         try {
-            val body = String(Base64.decode(blob, Base64.NO_WRAP), Charsets.UTF_8)
+            val fromBytes = Base64.decode(from, Base64.NO_WRAP)
+            val blobBytes = Base64.decode(blob, Base64.NO_WRAP)
+
+            val body = KeyManager.decryptFor(context, fromBytes, blobBytes)
+
+            if (body == null) {
+                Log.w("WS", "[PrismaClient.kt] .decryptFor вернула null")
+                val ack = JSONObject()
+                ack.put("type", PRISMA_CONST.CLIENT_ACK)
+                ack.put("message_id", messageId)
+                webSocket.send(ack.toString())
+
+                return
+            }
 
             var contact = dao.getContactByKey(from)
             if (contact == null) {
@@ -204,5 +229,27 @@ class PrismaClient(
             reconnecting.set(false)
             start()
         }
+    }
+
+    fun pushToken(websocket: WebSocket) {
+        scope.launch {
+            FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                val tokenJson = JSONObject()
+                tokenJson.put("type", PRISMA_CONST.CLIENT_PUSH_TOKEN)
+                tokenJson.put("token", token)
+                websocket.send(tokenJson.toString())
+
+                Log.d("WS", "Токен успешно отправлен")
+            }
+        }
+    }
+
+    fun sendNewToken(token: String) {
+        if (!authorized) return
+
+        val tokenJson = JSONObject()
+        tokenJson.put("type", PRISMA_CONST.CLIENT_PUSH_TOKEN)
+        tokenJson.put("token", token)
+        socket?.send(tokenJson.toString())
     }
 }

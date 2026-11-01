@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.devtools.ksp") version "2.3.12"
+    id("com.google.gms.google-services") version "4.5.0"
+
 }
 
 android {
@@ -43,6 +45,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
+    implementation(platform("com.google.firebase:firebase-bom:33.5.0"))
     implementation("com.goterl:lazysodium-android:5.2.0@aar")
     implementation("net.java.dev.jna:jna:5.17.0@aar")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -50,6 +53,8 @@ dependencies {
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("com.google.firebase:firebase-messaging")
+
     ksp("androidx.room:room-compiler:2.8.4")
 
     testImplementation(libs.junit)
