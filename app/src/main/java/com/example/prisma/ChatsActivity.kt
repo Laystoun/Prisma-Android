@@ -1,8 +1,12 @@
 package com.example.prisma
 
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -17,6 +21,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -31,6 +36,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.prisma.data.KeyManager
 import com.example.prisma.data.db.ContactEntity
 import com.example.prisma.data.db.PrismaDatabase
+import com.example.prisma.data.update.UpdateManager
+import com.example.prisma.data.update.UpdateStatus
 import com.github.alexzhirkevich.customqrgenerator.QrData
 import com.github.alexzhirkevich.customqrgenerator.vector.QrCodeDrawable
 import com.github.alexzhirkevich.customqrgenerator.vector.createQrVectorOptions
@@ -44,8 +51,15 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class ChatsActivity : AppCompatActivity() {
     private val dao by lazy {
@@ -55,6 +69,12 @@ class ChatsActivity : AppCompatActivity() {
     private var isConnected = false
     lateinit var chatsAdapter: ChatsAdapter
     lateinit var toolbar: MaterialToolbar
+
+
+    private lateinit var updateCard: MaterialCardView
+    private lateinit var updateProgress: LinearProgressIndicator
+    private lateinit var updatePercent: TextView
+    private lateinit var updateSize: TextView
 
     private val notificationPermissionLauncher =
         registerForActivityResult(
@@ -78,6 +98,12 @@ class ChatsActivity : AppCompatActivity() {
             }
         }
 
+    private val downloadReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            tryInstallUpdate()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -87,6 +113,11 @@ class ChatsActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        updateCard = findViewById(R.id.card_update_progress)
+        updateProgress = findViewById(R.id.progress_update)
+        updatePercent = findViewById(R.id.tv_update_percent)
+        updateSize = findViewById(R.id.tv_update_size)
+
         val client = (application as PrismaApp).client
 
         getPermissionOnNotify()
@@ -154,6 +185,44 @@ class ChatsActivity : AppCompatActivity() {
                     chatsAdapter.submit(list)
                 }
             }
+        }
+    }
+
+    private fun showUpdateProgress(
+        progress: Int,
+        downloaded: String,
+        total: String
+    ) {
+        updateCard.visibility = View.VISIBLE
+
+        updateProgress.progress = progress
+        updatePercent.text = "$progress%"
+        updateSize.text = "$downloaded из $total"
+    }
+
+    private fun hideUpdateProgress() {
+        updateCard.visibility = View.GONE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ContextCompat.registerReceiver(
+            this,
+            downloadReceiver,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        tryInstallUpdate()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(downloadReceiver)
+    }
+
+    private fun tryInstallUpdate() {
+        UpdateManager.installPendingIfReady(this)?.let {
+            Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -310,6 +379,68 @@ class ChatsActivity : AppCompatActivity() {
         }
 
         bottomSheet.show()
+    }
+
+    private fun formatSize(bytes: Long): String {
+        val mb = bytes / 1024.0 / 1024.0
+        return String.format(Locale.getDefault(), "%.1f МБ", mb)
+    }
+
+    fun observeUpdateDownload(downloadId: Long) {
+        lifecycleScope.launch {
+            updateCard.visibility = View.VISIBLE
+
+            while (isActive) {
+                val state = withContext(Dispatchers.IO) {
+                    UpdateManager.getProgress(this@ChatsActivity, downloadId)
+                }
+
+                updateProgress.progress = state.progress
+                updatePercent.text = "${state.progress}%"
+
+                updateSize.text =
+                    "${formatSize(state.downloaded)} из ${formatSize(state.total)}"
+
+                when (state.status) {
+                    UpdateStatus.READY -> {
+                        updateSize.text = "Загрузка завершена. Проверка файла..."
+
+                        val error = withContext(Dispatchers.IO) {
+                            UpdateManager.installPendingIfReady(this@ChatsActivity)
+                        }
+
+                        if (error != null) {
+                            updateSize.text = error
+                        }
+
+                        break
+                    }
+
+                    UpdateStatus.ERROR -> {
+                        updateSize.text = "Ошибка загрузки"
+                        break
+                    }
+
+                    UpdateStatus.PAUSED -> {
+                        updateSize.text = "Загрузка приостановлена"
+                    }
+
+                    UpdateStatus.PENDING -> {
+                        updateSize.text = "Ожидание загрузки..."
+                    }
+
+                    UpdateStatus.PROGRESS -> {
+                        updateSize.text = "Загрузка обновления..."
+                    }
+
+                    else -> {
+                        updateSize.text = "Получение состояния загрузки..."
+                    }
+                }
+
+                delay(500)
+            }
+        }
     }
 
     private fun openNotificationSettings() {
