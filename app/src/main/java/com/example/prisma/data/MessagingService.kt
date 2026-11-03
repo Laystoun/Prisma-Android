@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -38,7 +39,14 @@ class PrismaMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        (application as PrismaApp).client.sendNewToken(token)
+
+        if (!KeyManager.hasKeys(this)) {
+            Log.d("FCM", "Keys not generated, skipping token handling")
+            return
+        }
+
+        val app = application as PrismaApp
+        app.client
     }
 
     private fun showNotification(title: String, body: String) {
