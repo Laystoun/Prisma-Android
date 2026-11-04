@@ -24,6 +24,8 @@ import com.example.prisma.data.db.MessageStatus
 import com.example.prisma.data.db.PrismaDatabase
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
@@ -31,7 +33,7 @@ class ChatActivity : AppCompatActivity() {
         PrismaDatabase.getInstance(this).getDao()
     }
     private var contact: ContactEntity? = null
-    private val adapter = ChatAdapter()
+    private lateinit var adapter: ChatAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +47,9 @@ class ChatActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.mt_chatD_toolbar)
         val rv = findViewById<RecyclerView>(R.id.rv_chat_viewMessages)
         val etMessage = findViewById<EditText>(R.id.et_chat_enterMessage)
+        val sendBtn = findViewById<ImageButton>(R.id.btn_chat_sendMessage)
+
+        adapter = ChatAdapter(sendBtn)
         rv.adapter = adapter
 
         toolbar.setNavigationOnClickListener {
@@ -52,11 +57,27 @@ class ChatActivity : AppCompatActivity() {
         }
 
         val contactId = intent.getLongExtra("contactId", 0)
-        val sendBtn = findViewById<ImageButton>(R.id.btn_chat_sendMessage)
 
         lifecycleScope.launch {
             contact = dao.getContactById(contactId)
             toolbar.title = contact?.name ?: contact?.pubKey?.take(8)?.uppercase()
+
+            val client = (application as PrismaApp).client
+
+            client.onGetContactOnline { isOnline ->
+                toolbar.post {
+                    toolbar.subtitle = if (isOnline) "В сети" else "Не в сети"
+                }
+            }
+
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    while (isActive) {
+                        client.contactIsOnline(contact?.pubKey ?: "")
+                        delay(7_000)
+                    }
+                }
+            }
 
             dao.setMessageIsRead(contactId)
             toolbar.setOnClickListener {
