@@ -8,6 +8,7 @@ import com.example.prisma.data.db.MessageDirection
 import com.example.prisma.data.db.MessageEntity
 import com.example.prisma.data.db.MessageStatus
 import com.example.prisma.data.db.PrismaDatabase
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,11 +33,13 @@ object PRISMA_CONST {
     const val CLIENT_SEND = "send"
     const val CLIENT_ACK = "ack"
     const val CLIENT_PUSH_TOKEN = "push_token"
+    const val CLIENT_STATUS_REQUEST = "client_status_request"
 
     /*SERVER*/
     const val SERVER_CHALLENGE = "challenge"
     const val SERVER_OK = "ok"
     const val SERVER_DELIVER = "deliver"
+    const val SERVER_STATUS_RESPONSE = "server_status_response"
 }
 
 class PrismaClient(
@@ -50,6 +53,12 @@ class PrismaClient(
     private val dao by lazy { PrismaDatabase.getInstance(context).getDao() }
     private val conn = MutableStateFlow(false)
     val connected = conn.asStateFlow()
+
+    private var onContactOnlineCallback: ((Boolean) -> Unit)? = null
+
+    fun onGetContactOnline(callback: (Boolean) -> Unit) {
+        onContactOnlineCallback = callback
+    }
 
     val reconnecting = AtomicBoolean(false)
     val retryDelay: Long = 1000
@@ -118,6 +127,15 @@ class PrismaClient(
                             val from = jsonObj.getString("from")
                             val blob = jsonObj.getString("blob")
                             scope.launch { handleDeliver(webSocket, messageId, from, blob) }
+                        }
+
+                        PRISMA_CONST.SERVER_STATUS_RESPONSE -> {
+                            val pubKey = jsonObj.getString("pub_key")
+                            val online = jsonObj.getBoolean("online")
+
+                            onContactOnlineCallback?.invoke(online)
+
+                            Log.d("WS", "Контакт $pubKey online: $online")
                         }
                     }
                 } catch (e: Exception) {
@@ -228,6 +246,20 @@ class PrismaClient(
             delay(delayMs)
             reconnecting.set(false)
             start()
+        }
+    }
+
+    fun contactIsOnline(pubKey: String) {
+        if (!authorized) return
+
+        val request = JSONObject()
+        request.put("type", PRISMA_CONST.CLIENT_STATUS_REQUEST)
+        request.put("pub_key", pubKey)
+
+        val sent = socket?.send(request.toString()) ?: false
+
+        if (!sent) {
+            Log.e("WS", "Не удалось отправить запрос статуса")
         }
     }
 

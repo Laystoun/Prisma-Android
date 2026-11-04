@@ -102,8 +102,6 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-
-    <!--        @string/chats_newChat_text -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_chats_newChat"
         android:layout_width="wrap_content"
