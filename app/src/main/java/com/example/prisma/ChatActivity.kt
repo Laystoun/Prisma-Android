@@ -8,6 +8,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -66,7 +67,10 @@ class ChatActivity : AppCompatActivity() {
 
             client.onGetContactOnline { isOnline ->
                 toolbar.post {
-                    toolbar.subtitle = if (isOnline) "В сети" else "Не в сети"
+                    animateToolbarSubtitle(
+                        toolbar,
+                        if (isOnline) "В сети" else "Не в сети"
+                    )
                 }
             }
 
@@ -116,6 +120,68 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun animateToolbarSubtitle(
+        toolbar: MaterialToolbar,
+        newText: String
+    ) {
+        if (toolbar.subtitle?.toString() == newText) return
+
+        val subtitleView = toolbar.findSubtitleTextView()
+
+        if (subtitleView == null) {
+            toolbar.subtitle = newText
+            return
+        }
+
+        val offset = 3f * toolbar.resources.displayMetrics.density
+
+        subtitleView.animate().cancel()
+
+        subtitleView.animate()
+            .alpha(0f)
+            .translationY(-offset)
+            .setDuration(45)
+            .withEndAction {
+
+                toolbar.subtitle = newText
+
+                subtitleView.alpha = 0f
+                subtitleView.translationY = offset
+
+                subtitleView.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(55)
+                    .start()
+            }
+            .start()
+    }
+
+    private fun MaterialToolbar.findSubtitleTextView(): TextView? {
+        val target = subtitle?.toString() ?: return null
+
+        fun search(parent: ViewGroup): TextView? {
+            for (i in 0 until parent.childCount) {
+                val child = parent.getChildAt(i)
+
+                if (child is TextView &&
+                    child.text.toString() == target &&
+                    child.text.toString() != title?.toString()
+                ) {
+                    return child
+                }
+
+                if (child is ViewGroup) {
+                    search(child)?.let { return it }
+                }
+            }
+
+            return null
+        }
+
+        return search(this)
     }
 
     fun showNewChatsDialog(
