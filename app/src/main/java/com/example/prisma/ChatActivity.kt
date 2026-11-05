@@ -74,7 +74,7 @@ class ChatActivity : AppCompatActivity() {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     while (isActive) {
                         client.contactIsOnline(contact?.pubKey ?: "")
-                        delay(7_000)
+                        delay(5_000)
                     }
                 }
             }
