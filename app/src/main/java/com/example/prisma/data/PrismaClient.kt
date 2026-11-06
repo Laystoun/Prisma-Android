@@ -123,6 +123,7 @@ class PrismaClient(
                         }
 
                         PRISMA_CONST.SERVER_DELIVER -> {
+                            Log.d("WS", "Message:\n${jsonObj}")
                             val messageId = jsonObj.getLong("message_id")
                             val from = jsonObj.getString("from")
                             val blob = jsonObj.getString("blob")
@@ -162,7 +163,7 @@ class PrismaClient(
         })
     }
 
-    fun send(receiverKey: String, text: String): Boolean {
+    fun send(receiverKey: String, text: String, sendAt: Long = System.currentTimeMillis()): Boolean {
         if (!authorized) return false
 
         val blob: String
@@ -179,6 +180,7 @@ class PrismaClient(
         json.put("type", PRISMA_CONST.CLIENT_SEND)
         json.put("to", receiverKey)
         json.put("blob", blob)
+        json.put("send_at", sendAt)
 
         return socket?.send(json.toString()) ?: false
     }
