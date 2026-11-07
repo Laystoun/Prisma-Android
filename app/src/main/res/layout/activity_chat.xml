@@ -47,6 +47,7 @@
         android:paddingVertical="12dp"
         android:paddingHorizontal="16dp"
         android:textColor="@color/background_text"
+        android:maxLength="2048"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/btn_chat_sendMessage" />
