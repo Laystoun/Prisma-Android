@@ -1,5 +1,7 @@
 package com.example.prisma.data
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +9,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -18,13 +21,19 @@ import com.example.prisma.data.db.MessageStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.graphics.drawable.toDrawable
 
 class ChatAdapter(
-    private val sendBtn: ImageView
+    private val sendBtn: ImageView,
+    private val onSelectionChanged: (Int) -> Unit,
+    private val onDeleteMessage: (MessageEntity) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
     private var messages: List<MessageEntity> = emptyList()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val pendingAnimationIds = mutableSetOf<Long>()
+
+    private val selectedMessages = mutableSetOf<Long>()
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -40,7 +49,50 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val msg = messages[position]
+        val isSelected = msg.id in selectedMessages
         val time = timeFormat.format(Date(msg.createdAt))
+
+        val bubble = when (holder) {
+            is InViewHolder -> holder.bubble
+            is OutViewHolder -> holder.bubble
+            else -> holder.itemView
+        }
+
+        val background = when {
+            isSelected -> R.drawable.bg_message_popup_selected
+
+            holder is InViewHolder -> R.drawable.bg_bubble_in
+
+            holder is OutViewHolder -> R.drawable.bg_bubble_out
+
+            else -> R.drawable.bg_message_popup
+        }
+
+        bubble.setBackgroundResource(background)
+
+        holder.itemView.setOnLongClickListener {
+            toggleSelection(msg.id)
+            true
+        }
+
+        holder.itemView.setOnClickListener {
+            if (selectedMessages.isNotEmpty()) {
+                toggleSelection(msg.id)
+            }
+        }
+
+        bubble.setOnLongClickListener {
+            toggleSelection(msg.id)
+            true
+        }
+
+        bubble.setOnClickListener {
+            if (selectedMessages.isNotEmpty()) {
+                toggleSelection(msg.id)
+            } else {
+                showMessageMenu(bubble, msg)
+            }
+        }
 
         if (holder is InViewHolder) {
             holder.text.text = msg.body
@@ -66,6 +118,15 @@ class ChatAdapter(
 
     override fun getItemViewType(position: Int): Int {
         return messages[position].direction
+    }
+
+    private fun toggleSelection(messageId: Long) {
+        if (!selectedMessages.add(messageId)) {
+            selectedMessages.remove(messageId)
+        }
+
+        notifyDataSetChanged()
+        onSelectionChanged(selectedMessages.size)
     }
 
     fun submit(newMessages: List<MessageEntity>) {
@@ -102,6 +163,7 @@ class ChatAdapter(
     class InViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val text = view.findViewById<TextView>(R.id.tv_msgIn_text)
         val time = view.findViewById<TextView>(R.id.tv_msgIn_time)
+        val bubble = view.findViewById<View>(R.id.ll_msgIn_bubble)
     }
 
     class OutViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -142,5 +204,42 @@ class ChatAdapter(
             .setDuration(100)
             .setInterpolator(DecelerateInterpolator())
             .start()
+    }
+
+    fun getSelectedMessages(): List<MessageEntity> {
+        return messages.filter { it.id in selectedMessages }
+    }
+
+    fun clearSelection() {
+        selectedMessages.clear()
+        notifyDataSetChanged()
+        onSelectionChanged(0)
+    }
+
+    private fun showMessageMenu(anchor: View, msg: MessageEntity) {
+        val context = anchor.context
+
+        val popupView = LayoutInflater.from(context)
+            .inflate(R.layout.popup_message_menu, null)
+
+
+
+        val popup = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            false
+        )
+
+        popup.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        popup.isOutsideTouchable = true
+        popup.elevation = 12f * context.resources.displayMetrics.density
+
+        popupView.findViewById<View>(R.id.ll_popupMessage_containerDelete).setOnClickListener {
+            popup.dismiss()
+            onDeleteMessage(msg)
+        }
+
+        popup.showAsDropDown(anchor)
     }
 }

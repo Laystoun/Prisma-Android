@@ -50,4 +50,29 @@ import kotlinx.coroutines.flow.Flow
 
     @Query("DELETE FROM ContactEntity WHERE id = :id")
     suspend fun deleteContact(id: Long)
+
+    @Query("""
+        DELETE FROM MessageEntity
+        WHERE id IN (:ids)
+    """)
+    suspend fun deleteMessagesByIds(ids: List<Long>)
+
+    @Query("""
+        SELECT * FROM MessageEntity
+        WHERE contactId = :contactId
+        AND direction = :direction
+        AND messageClientId = :clientMessageId
+        LIMIT 1
+    """)
+    suspend fun getMessageByClientId(
+        contactId: Long,
+        direction: Int,
+        clientMessageId: String
+    ): MessageEntity?
+
+    @Query("""
+        DELETE FROM MessageEntity
+        WHERE id = :id
+    """)
+    suspend fun deleteMessageById(id: Long)
 }

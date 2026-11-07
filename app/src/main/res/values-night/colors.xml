@@ -12,4 +12,5 @@
     <color name="fingerprint_soft">#593F9AFF</color>
     <color name="fingerprint_empty">#2A313A</color>
     <color name="btn_text_color">@color/white</color>
+    <color name="popup_message_chat_background">#212121</color>
 </resources>

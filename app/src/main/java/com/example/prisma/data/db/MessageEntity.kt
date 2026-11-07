@@ -1,5 +1,6 @@
 package com.example.prisma.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -24,7 +25,8 @@ serverId: Long? (message_id от сервера, у исходящих null)
     )],
     indices = [
         Index("contactId"),
-        Index(value = ["serverId"], unique = true)
+        Index(value = ["serverId"], unique = true),
+        Index(value = ["messageClientId"], unique = true)
     ]
 )
 data class MessageEntity(
@@ -36,5 +38,7 @@ data class MessageEntity(
     val createdAt: Long,
     val status: Int,
     val isRead: Boolean,
+    @ColumnInfo(defaultValue = "''")
+    val messageClientId: String,
     val serverId: Long?
 )
