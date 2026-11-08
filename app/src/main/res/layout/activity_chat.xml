@@ -18,6 +18,14 @@
         app:navigationIconTint="@color/background_text"
         app:titleTextColor="@color/background_text" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/primary"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/mt_chatD_toolbar" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_chat_viewMessages"
         android:layout_width="0dp"
@@ -41,7 +49,7 @@
         android:background="@drawable/bg_message_input"
         android:hint="Сообщение"
         android:inputType="textMultiLine|textCapSentences"
-        android:textCursorDrawable="@color/primary"
+        android:textCursorDrawable="@drawable/cursor_primary"
         android:maxLines="4"
         android:minHeight="48dp"
         android:paddingVertical="12dp"

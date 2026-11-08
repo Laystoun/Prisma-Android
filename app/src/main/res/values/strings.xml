@@ -29,7 +29,7 @@
     <string name="denied_camera_title">Нужен доступ к камере</string>
     <string name="denied_camera_text">Чтобы сканировать QR-коды, разрешите приложению использовать камеру.</string>
     <string name="denied_camera_button">Разрешить камеру</string>
-    
+
     <string name="available_new_update">Доступно новое обновление</string>
     <string name="get_new_update">Обновить</string>
 </resources>

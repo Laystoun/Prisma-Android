@@ -1,8 +1,11 @@
 package com.example.prisma.data
 
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
@@ -60,15 +63,26 @@ class ChatAdapter(
 
         val background = when {
             isSelected -> R.drawable.bg_message_popup_selected
-
             holder is InViewHolder -> R.drawable.bg_bubble_in
-
             holder is OutViewHolder -> R.drawable.bg_bubble_out
-
             else -> R.drawable.bg_message_popup
         }
 
         bubble.setBackgroundResource(background)
+
+        var touchX = 0
+        var touchY = 0
+
+        val touchListener = View.OnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                touchX = event.rawX.toInt()
+                touchY = event.rawY.toInt()
+            }
+            false
+        }
+
+        holder.itemView.setOnTouchListener(touchListener)
+        bubble.setOnTouchListener(touchListener)
 
         holder.itemView.setOnLongClickListener {
             toggleSelection(msg.id)
@@ -78,6 +92,8 @@ class ChatAdapter(
         holder.itemView.setOnClickListener {
             if (selectedMessages.isNotEmpty()) {
                 toggleSelection(msg.id)
+            } else {
+                showMessageMenu(holder.itemView, msg, touchX, touchY)
             }
         }
 
@@ -90,7 +106,7 @@ class ChatAdapter(
             if (selectedMessages.isNotEmpty()) {
                 toggleSelection(msg.id)
             } else {
-                showMessageMenu(bubble, msg)
+                showMessageMenu(bubble, msg, touchX, touchY)
             }
         }
 
@@ -216,30 +232,95 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
-    private fun showMessageMenu(anchor: View, msg: MessageEntity) {
+    private fun showMessageMenu(
+        anchor: View,
+        msg: MessageEntity,
+        x: Int,
+        y: Int
+    ) {
         val context = anchor.context
 
         val popupView = LayoutInflater.from(context)
             .inflate(R.layout.popup_message_menu, null)
 
-
-
         val popup = PopupWindow(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            false
+            true
         )
 
         popup.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
         popup.isOutsideTouchable = true
         popup.elevation = 12f * context.resources.displayMetrics.density
 
-        popupView.findViewById<View>(R.id.ll_popupMessage_containerDelete).setOnClickListener {
+        popupView.findViewById<View>(
+            R.id.ll_popupMessage_containerDelete
+        ).setOnClickListener {
             popup.dismiss()
             onDeleteMessage(msg)
         }
 
-        popup.showAsDropDown(anchor)
+        val frame = Rect()
+        anchor.rootView.getWindowVisibleDisplayFrame(frame)
+
+        popupView.measure(
+            View.MeasureSpec.makeMeasureSpec(
+                frame.width(),
+                View.MeasureSpec.AT_MOST
+            ),
+            View.MeasureSpec.makeMeasureSpec(
+                frame.height(),
+                View.MeasureSpec.AT_MOST
+            )
+        )
+
+        val popupWidth = popupView.measuredWidth
+        val popupHeight = popupView.measuredHeight
+        val margin = (8 * context.resources.displayMetrics.density).toInt()
+
+        val showRight = x + popupWidth + margin <= frame.right
+
+        val left = if (showRight) {
+            x + margin
+        } else {
+            x - popupWidth - margin
+        }.coerceIn(
+            frame.left,
+            maxOf(frame.left, frame.right - popupWidth)
+        )
+
+        val showAbove = y - popupHeight - margin >= frame.top
+
+        val top = if (showAbove) {
+            y - popupHeight - margin
+        } else {
+            y + margin
+        }.coerceIn(
+            frame.top,
+            maxOf(frame.top, frame.bottom - popupHeight)
+        )
+
+        popupView.pivotX = if (showRight) 0f else popupWidth.toFloat()
+        popupView.pivotY = if (showAbove) popupHeight.toFloat() else 0f
+
+        popupView.alpha = 0f
+        popupView.scaleX = 0.85f
+        popupView.scaleY = 0.85f
+
+        popup.showAtLocation(
+            anchor,
+            Gravity.TOP or Gravity.START,
+            left,
+            top
+        )
+
+        popupView.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(80)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
     }
 }
